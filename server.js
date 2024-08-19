@@ -10,6 +10,9 @@ const globalError = require("./middlewares/errorMiddleware");
 // Load config
 dotenv.config();
 
+// Connect to DB
+require("./config/db")();
+
 const app = express();
 
 // Dev logging middleware
@@ -32,7 +35,7 @@ app.use(globalError);
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(
-    `server (${process.env.NODE_ENV}) listening at http://localhost:${port}`
+    `server (${process.env.NODE_ENV}) listening at http://localhost:${port}`.yellow.bold
   );
 });
 
