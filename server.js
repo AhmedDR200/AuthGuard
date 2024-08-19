@@ -3,6 +3,10 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const colors = require("colors");
 
+// Utils
+const ApiError = require("./utils/apiError");
+const globalError = require("./middlewares/errorMiddleware");
+
 // Load config
 dotenv.config();
 
@@ -13,10 +17,28 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
+// 404 Error Handling Middleware
+app.all("*", (req, res, next) => {
+  // const err = new Error(`Can't find ${req.originalUrl} on this server`);
+  // err.status = 'fail';
+  // err.statusCode = 404;
+  next(new ApiError(`Can't find ${req.originalUrl} on this server`, 400));
+});
 
+// Global Error Handling Middleware
+app.use(globalError);
 
+// Server Connection
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(
+    `server (${process.env.NODE_ENV}) listening at http://localhost:${port}`
+  );
+});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server is running on port 3000".blue);
+// Events => Event Loop => Callback Queue => Event Loop => Event Handler
+process.on("uncaughtException", (err) => {
+  console.log("UNCAUGHT EXCEPTION! 💥 Shutting down...");
+  console.log(err);
+  process.exit(1);
 });
