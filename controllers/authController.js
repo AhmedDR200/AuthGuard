@@ -27,3 +27,33 @@ exports.signup = asyncHandler(async (req, res, next) => {
     token,
   });
 });
+
+/**
+ * @desc    Login a user
+ * @route   POST /api/v1/auth/login
+ * @access  Public
+ */
+exports.login = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  // Check if email and password exist in the request body
+  if (!email || !password) {
+    return next(new AppError("Please provide email and password", 400));
+  }
+
+  // Check if user exists and password is correct
+  const user = await User.findOne({ email }).select("+password");
+
+  if (!user || !(await user.correctPassword(password, user.password))) {
+    return next(new AppError("Incorrect email or password", 401));
+  }
+
+  // If everything is ok, send token to client
+  const token = signToken(user._id);
+
+  res.status(200).json({
+    status: "success",
+    data: { user },
+    token,
+  });
+});
