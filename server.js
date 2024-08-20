@@ -7,6 +7,9 @@ const colors = require("colors");
 const ApiError = require("./utils/apiError");
 const globalError = require("./middlewares/errorMiddleware");
 
+// routes
+const authRoutes = require("./routes/authRoute");
+
 // Load config
 dotenv.config();
 
@@ -15,10 +18,16 @@ require("./config/db")();
 
 const app = express();
 
+// body parser
+app.use(express.json());
+
 // Dev logging middleware
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
+
+// mount routers
+app.use("/api/v1/auth", authRoutes);
 
 // 404 Error Handling Middleware
 app.all("*", (req, res, next) => {
@@ -35,7 +44,8 @@ app.use(globalError);
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(
-    `server (${process.env.NODE_ENV}) listening at http://localhost:${port}`.yellow.bold
+    `server (${process.env.NODE_ENV}) listening at http://localhost:${port}`
+      .yellow.bold
   );
 });
 
