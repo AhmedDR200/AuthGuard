@@ -8,7 +8,9 @@ const {
   deleteMovie,
 } = require("../controllers/movieController");
 
-router.route("/").get(getAllMovies).post(createMovie);
+const { protect } = require("../controllers/authController");
+
+router.route("/").get(protect, getAllMovies).post(createMovie);
 router.route("/:id").get(getMovie).patch(updateMovie).delete(deleteMovie);
 
 module.exports = router;

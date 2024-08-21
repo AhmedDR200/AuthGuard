@@ -33,6 +33,9 @@ const user = new mongoose.Schema(
         message: "Passwords are not the same",
       },
     },
+    passwordChangedAt: {
+      type: Date,
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -56,8 +59,23 @@ user.pre("save", async function (next) {
 });
 
 // Compare password with hashed password
-user.methods.correctPassword = async function (candidatePassword, userPassword) {
+user.methods.correctPassword = async function (
+  candidatePassword,
+  userPassword
+) {
   return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+// Check if user changed password after token was issued
+user.methods.changedPasswordAfter = async function (JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+    return JWTTimestamp < changedTimestamp;
+  }
+  return false;
 };
 
 module.exports = mongoose.model("User", user);
