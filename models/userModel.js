@@ -92,4 +92,10 @@ user.methods.changedPasswordAfter = function (JWTTimestamp) {
   return false;
 };
 
+// Get Active Users Only
+user.pre(/^find/, function (next) {
+  this.find({ active: { $ne: false } });
+  next();
+});
+
 module.exports = mongoose.model("User", user);
