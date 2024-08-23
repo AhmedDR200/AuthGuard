@@ -268,3 +268,42 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
     token,
   });
 });
+
+// Helper function to filter out unwanted fields from req.body
+const filterReqObj = (obj, ...allowedFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach((el) => {
+    if (allowedFields.includes(el)) newObj[el] = obj[el];
+  });
+  return newObj;
+};
+
+/**
+ * @desc   Update Logged User Profile
+ * @route  PATCH /api/v1/auth/updateProfile
+ * @access Private
+ */
+exports.updateProfile = asyncHandler(async (req, res, next) => {
+  if (req.body.password || req.body.confirmPassword) {
+    return next(
+      new AppError(
+        "This route is not for password updates. Please use /updatePassword",
+        400
+      )
+    );
+  }
+  // update user document
+  const filterObj = filterReqObj(req.body, "name", "email");
+
+  const updatedUser = await User.findByIdAndUpdate(req.user._id, filterObj, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      user: updatedUser,
+    },
+  });
+});
