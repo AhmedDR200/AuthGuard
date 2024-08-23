@@ -307,3 +307,19 @@ exports.updateProfile = asyncHandler(async (req, res, next) => {
     },
   });
 });
+
+
+/**
+ * @desc    Inactive User Account
+ * @route   DELETE /api/v1/auth/inactiveAccount
+ * @access  Private
+ */
+exports.inactiveAccount = asyncHandler(async (req, res, next) => {
+  // get user from collection
+  await User.findByIdAndUpdate(req.user._id, { active: false });
+
+  res.status(204).json({
+    status: "success",
+    message: "Account is Inactive",
+  });
+});
