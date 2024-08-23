@@ -1,8 +1,11 @@
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
+const sendEmail = require("../utils/sendEmail");
+const passwordResetTemplate = require("../utils/emailTemplate");
 const AppError = require("../utils/apiError");
 const util = require("util");
+const crypto = require("crypto");
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -120,3 +123,122 @@ exports.restrictTo = (...role) => {
     next();
   };
 };
+
+/**
+ * @desc    Forgot password
+ * @route   POST /api/v1/auth/forgotPassword
+ * @access  Public
+ */
+exports.forgotPassword = asyncHandler(async (req, res, next) => {
+  // get user by email
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return next(
+      new AppError(`There is no user with that email ${req.body.email}`, 404)
+    );
+  }
+  //if user exist, generate reset random 6 digits and save it in db
+  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+  // hash the code
+  const hashedResetCode = crypto
+    .createHash("sha256")
+    .update(resetCode)
+    .digest("hex");
+  // save hashed code to db
+  user.passwordResetCode = hashedResetCode;
+  // expire time => 10 min
+  user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+  user.passwordResetVerified = false;
+  await user.save({ validateBeforeSave: false });
+
+  // Generate the email content using the template
+  const htmlMessage = passwordResetTemplate(user, resetCode);
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Your password reset code (Valid for 10 min)",
+      // message: htmlMessage,
+      html: htmlMessage,
+    });
+  } catch (er) {
+    user.passwordResetCode = undefined;
+    user.passwordResetExpires = undefined;
+    user.passwordResetVerified = undefined;
+
+    // Save without triggering validation
+    await user.save({ validateBeforeSave: false });
+
+    return next(new AppError("There is an Error in sending Email", 500));
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: `Reset Code Sent to this Email: ${user.email}`,
+  });
+});
+
+/**
+ * @desc    Verify Password Code
+ * @route   POST /api/v1/auth/verifyPasswordCode
+ * @access  Public
+ */
+exports.verifyPasswordCode = asyncHandler(async (req, res, next) => {
+  // get user based on reset code
+  const hashedResetCode = crypto
+    .createHash("sha256")
+    .update(req.body.resetCode)
+    .digest("hex");
+
+  const user = await User.findOne({
+    passwordResetCode: hashedResetCode,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(new AppError("Reset Code Invalid or Expired"));
+  }
+  // reset code valid
+  user.passwordResetVerified = true;
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    status: "success",
+    message: "Reset Code is Verified",
+  });
+});
+
+/**
+ * @desc    Reset Password
+ * @route   POST /api/v1/auth/resetPassword
+ * @access  Public
+ */
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+  // get user based on email
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return next(
+      new AppError(`There is no user with email ${req.body.email}`, 400)
+    );
+  }
+  // check if reset code is verifed
+  if (!user.passwordResetVerified) {
+    return next(new AppError(`Reset code not verifed`, 404));
+  }
+
+  user.password = req.body.newPassword;
+
+  user.passwordResetCode = undefined;
+  user.passwordResetExpires = undefined;
+  user.passwordResetVerified = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  // generate new token ater all is ok
+  const token = signToken(user._id);
+
+  res.status(200).json({
+    status: "success",
+    message: "Password reset Successfully",
+    token: token,
+  });
+});

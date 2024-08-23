@@ -36,6 +36,9 @@ const user = new mongoose.Schema(
     passwordChangedAt: {
       type: Date,
     },
+    passwordResetCode: String,
+    passwordResetExpires: Date,
+    passwordResetVerified: Boolean,
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -53,7 +56,13 @@ const user = new mongoose.Schema(
 
 // Encrypt password before saving
 user.pre("save", async function (next) {
+  // Only run this function if the password was actually modified
+  if (!this.isModified("password")) return next();
+
+  // Hash the password with a cost of 12
   this.password = await bcrypt.hash(this.password, 12);
+
+  // Remove confirmPassword field after validation
   this.confirmPassword = undefined;
   next();
 });
@@ -66,8 +75,8 @@ user.methods.correctPassword = async function (
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
-// Check if user changed password after token was issued
-user.methods.changedPasswordAfter = async function (JWTTimestamp) {
+// Check if user changed password after the token was issued
+user.methods.changedPasswordAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const changedTimestamp = parseInt(
       this.passwordChangedAt.getTime() / 1000,
