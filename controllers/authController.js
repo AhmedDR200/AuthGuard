@@ -8,7 +8,6 @@ const AppError = require("../utils/apiError");
 const util = require("util");
 const crypto = require("crypto");
 
-
 /**
  * @desc    Signup a new user
  * @route   POST /api/v1/auth/signup
