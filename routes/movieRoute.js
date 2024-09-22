@@ -10,7 +10,7 @@ const {
 
 const { protect, restrictTo } = require("../controllers/authController");
 
-router.route("/").get(protect, restrictTo("admin"), getAllMovies).post(createMovie);
+router.route("/").get(protect, restrictTo("user"), getAllMovies).post(createMovie);
 router.route("/:id").get(getMovie).patch(updateMovie).delete(deleteMovie);
 
 module.exports = router;

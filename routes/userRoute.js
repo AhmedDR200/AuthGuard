@@ -7,6 +7,7 @@ const {
   updateProfile,
   inactiveAccount,
 } = require("../controllers/userController");
+const { logout } = require("../controllers/authController");
 
 // Routes that do not require restrictTo middleware
 router.route("/updatepassword").patch(protect, updatePassword);
@@ -14,6 +15,8 @@ router.route("/updatepassword").patch(protect, updatePassword);
 router.route("/updateprofile").patch(protect, updateProfile);
 
 router.route("/inactiveaccount").delete(protect, inactiveAccount);
+
+router.route("/logout").get(protect, logout);
 
 // Routes that require restrictTo middleware
 router

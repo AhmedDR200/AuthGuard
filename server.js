@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const colors = require("colors");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 
 // Utils
 const ApiError = require("./utils/apiError");
@@ -23,6 +24,25 @@ const app = express();
 
 // body parser
 app.use(express.json());
+
+// Express session
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.DB_URL,
+      collectionName: "sessions",
+      ttl: 24 * 60 * 60, // 1 day
+    }),
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    },
+  })
+);
 
 // Dev logging middleware
 if (process.env.NODE_ENV === "development") {
